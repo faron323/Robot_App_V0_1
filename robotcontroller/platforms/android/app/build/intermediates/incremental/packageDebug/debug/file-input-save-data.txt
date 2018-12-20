@@ -1,5 +1,5 @@
 #Internal package file, do not edit.
-#Thu Dec 20 04:19:11 PST 2018
+#Thu Dec 20 05:06:49 PST 2018
 4.path=www/cordova-js-src/android/promptbasednativeapi.js
 8.set=ASSET
 6.path=www/plugins/cordova-plugin-ble-central/www/ble.js

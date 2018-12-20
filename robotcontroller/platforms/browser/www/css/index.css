@@ -14,9 +14,17 @@ body {
 h1 {
     text-align: center;
 }
+p {color: red;}
+
+p.ex1 {display: none;}
+p.ex2 {display: inline;}
+p.ex3 {display: block;
+    width: 1px;
+    height: 1px}
+p.ex4 {display: inline-block;}
 
 button {
-    background-color: #4CAF50; /* Green */
+    background-color: rgb(206, 48, 48); /* red */
     border: none;
     color: white;
     padding: 15px 32px;
@@ -82,6 +90,7 @@ button {
     font-weight: 200;
     display: block;
     -webkit-border-radius: 6px;
+    -border-radius: 7px;
     width: 100%;
     height: 140px;
     text-align: left;    
