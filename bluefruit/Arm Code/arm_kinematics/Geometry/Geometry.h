@@ -2,7 +2,7 @@
 #define GEOMETRY_H
 
 #include "Arduino.h"
-#include "BasicLinearAlgebra.h"
+#include "BasicLinearAlgebra/BasicLinearAlgebra.h"
 #include <math.h>
 
 using namespace BLA;
@@ -12,13 +12,13 @@ class Point : public Matrix<3,1>
 {
 public:
 Point() {
-		Fill(0);
+	Fill(0);
 }
 Point(const Point &obj) : Matrix<3,1>() {
-		(*this) = obj;
+	(*this) = obj;
 }
 Point(const Matrix<3,1> &obj) {
-		(*this) = obj;
+	(*this) = obj;
 }
 
 float Magnitude();
@@ -26,21 +26,21 @@ float DotProduct(Point &obj);
 Point CrossProduct(Point &p);
 
 float &X() {
-		return (*this)(0);
+	return (*this)(0);
 }
 float &Y() {
-		return (*this)(1);
+	return (*this)(1);
 }
 float &Z() {
-		return (*this)(2);
+	return (*this)(2);
 }
 
 template<class opMemT> Point &operator=(const Matrix<3,1,opMemT> &obj)
 {
-		for(int i = 0; i < 3; i++)
-				(*this)(i,0) = obj(i,0);
+	for(int i = 0; i < 3; i++)
+		(*this)(i,0) = obj(i,0);
 
-		return *this;
+	return *this;
 }
 };
 
@@ -49,13 +49,13 @@ class Rotation : public Matrix<3,3>
 {
 public:
 Rotation() {
-		*this = Identity<3,3>();
+	*this = Identity<3,3>();
 }
 Rotation(const Rotation &obj) : Matrix<3,3>() {
-		(*this) = obj;
+	(*this) = obj;
 }
 Rotation(const Matrix<3,3> &obj) {
-		(*this) = obj;
+	(*this) = obj;
 }
 
 Rotation &FromEulerAngles(float phi, float theta, float psi);
@@ -67,11 +67,11 @@ Rotation &RotateZ(float psi);
 
 template<class opMemT> Rotation &operator=(const Matrix<3,3,opMemT> &obj)
 {
-		for(int i = 0; i < Rows; i++)
-				for(int j = 0; j < Cols; j++)
-						(*this)(i,j)  = obj(i,j);
+	for(int i = 0; i < Rows; i++)
+		for(int j = 0; j < Cols; j++)
+			(*this)(i,j)  = obj(i,j);
 
-		return *this;
+	return *this;
 }
 };
 
@@ -83,10 +83,10 @@ Rotation R;
 Point p;
 
 Transformation() {
-		R = Identity<3,3>(); p.Fill(0);
+	R = Identity<3,3>(); p.Fill(0);
 }
 Transformation(const Transformation &obj) {
-		(*this) = obj;
+	(*this) = obj;
 }
 
 Transformation &operator*=(Transformation &obj);
@@ -95,13 +95,13 @@ Transformation operator*(Transformation &obj);
 float &operator()(int row, int col);
 
 float &X() {
-		return p(0);
+	return p(0);
 }
 float &Y() {
-		return p(1);
+	return p(1);
 }
 float &Z() {
-		return p(2);
+	return p(2);
 }
 
 Transformation &RotateX(float phi);
@@ -112,10 +112,10 @@ Transformation &Translate(float x, float y, float z);
 
 template<class opMemT> Transformation &operator=(const Matrix<4,4,opMemT> &obj)
 {
-		R = obj.Submatrix(Slice<0,3>(),Slice<0,3>());
-		p = obj.Submatrix(Slice<0,3>(),Slice<3,4>());
+	R = obj.Submatrix(Slice<0,3>(),Slice<0,3>());
+	p = obj.Submatrix(Slice<0,3>(),Slice<3,4>());
 
-		return *this;
+	return *this;
 }
 };
 
