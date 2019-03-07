@@ -13,11 +13,11 @@ bool lock_gripper = false;
 
 void setup() {
 	//Init Controller Button Interrupts
-	for(int i=0; i<3; i++) {
-		pinMode(19+i, INPUT);
-		digitalWrite(19+i, HIGH);
-		attachInterrupt(digitalPinToInterrupt(19+i), interrupt_toggle_joint, HIGH);
-	}
+//	for(int i=0; i<3; i++) {
+//		pinMode(19+i, INPUT);
+//		digitalWrite(19+i, HIGH);
+//		attachInterrupt(digitalPinToInterrupt(19+i), interrupt_toggle_joint, HIGH);
+//	}
 	//Init Motor Driver Outputs
 	for(int i=0; i<5; i++) {
 		pinMode(pul_pin[i], OUTPUT);
@@ -50,18 +50,20 @@ void loop() {
 
 	while(1) {
 
-		for(int i=0; i<6; i++) {
-			js_read[i] = analogRead(5-i);
-			if (js_read[i] >530 or js_read[i]<494) {
+		for(int i=0; i<4; i++) {
+			js_read[i] = analogRead(i);
+			if (js_read[i] >540 or js_read[i]<494) {
 				if (js_read[i]< 512) {
 					digitalWrite(dir_pin[i], 0);
 				}else{
 					digitalWrite(dir_pin[i], 1);
 				}
-//        Serial.println(i);
 				speed_joystick[i] = abs(js_read[i]-512)*4;
 				current_micros[i] = micros();
 
+//        if(i == 3){
+          Serial.println(js_read[i]);
+//        }
 				if (current_micros[i] - previous_micros[i] >= speed_initial[i] - speed_current[i]) {
 
 					toggle[i] = !toggle[i];
@@ -87,7 +89,7 @@ void loop() {
 					if(lock_gripper == false) {
 						servo_angle = map(js_read[5], 0, 1023, 110, 20);
 						gripper_servo.write(servo_angle);
-						Serial.println(servo_angle);
+//						Serial.println(servo_angle);
 						previous_millis = current_millis;
 					}
 				}

@@ -6,6 +6,8 @@ const int ena_pin[] = {22, 24, 26, 28, 30};
 const int max_rot[] = {90, 90, 90, 90, 90};
 const int min_rot[] = {-90, -90, -90, -90, -90};
 
+bool limit_switches[5] = {0, 0, 0, 0, 0};
+
 int speed_initial[5] = {2000, 2000, 1000,  5000, 5000};
 int speed_target[5] =  {900,  500,  300,   5000, 5000};
 int acceleration[5] =  {1,    1,    1,     1,    1};
@@ -221,62 +223,44 @@ Matrix<6> position_from_matrix(Matrix<4,4> matrix){
 		return return_matrix;
 }
 
-Matrix<6> move_joints(bool dir[5], float degree[5], int speed_initial[5], int speed_target[5], int acceleration[5]){
+Matrix<5> move_joints(bool dir[5], float degree[5], int speed_initial[5], int speed_target[5], int acceleration[5]){
 		long current_micros[5], previous_micros[5] = {};
-		int speed_current[5],sustain_steps[5], ramp_steps[5] = {};
-		int step_counter[5] = {};
+		int speed_current[5]= {};
+		int steps[5] = {};
 		bool toggle[5] = {};
 		float max_steps=0;
 		byte index=0;
-		Matrix<6> steps;
+		Matrix<5> step_counter;
 
 		for(byte i=0; i<5; i++) {
-				steps(i) = degree[i]/step_deg[i] * microstep[i];
-				if (max_steps < steps(i)) {
-						max_steps = steps(i);
+				digitalWrite(dir_pin[i], dir[i]);
+				steps[i] = degree[i]/step_deg[i] * microstep[i];
+				if (max_steps < steps[i]) {
+						max_steps = steps[i];
 						index = i;
 				}
 		}
 
-		for(byte i=0; i<5; i++) {
-				//Set Directions
-				digitalWrite(dir_pin[i], dir[i]);
-
-				//Calculate Ramping Envelope
-				speed_current[i] = speed_initial[i];
-
-				ramp_steps[i] = (speed_initial[i] - speed_target[i]) / acceleration[i];
-				sustain_steps[i] = steps(i) - (ramp_steps[i]*2);
-
-				if(ramp_steps[i] >= steps(i)/2) {
-						ramp_steps[i] = steps(i)/2-1;
-						sustain_steps[i] = steps(i)-ramp_steps[i]*2;
-				}
-
-		}
-		Serial << max_steps << "\n" << step_counter[index] << "\n";
-
-		while(max_steps > step_counter[index]) {
+		while(max_steps > step_counter(index)) {
 				for(byte i=0; i<5; i++) {
-						if (step_counter[i] < steps(i)) {
+						if (step_counter(i) < steps[i]) {
 								current_micros[i] = micros();
-								if (current_micros[i] - previous_micros[i] >= speed_current[i]) {
+								if (current_micros[i] - previous_micros[i] >= speed_initial[i]) {
 										toggle[i] = !toggle[i];
+										// Serial.println('t');
 										digitalWrite(pul_pin[i], toggle[i]);
-
-										if(step_counter[i] < ramp_steps[i]) {
-												speed_current[i] -= acceleration[i];
-										}else if((step_counter[i] >= (ramp_steps[i] + sustain_steps[i])-1)) {
-												speed_current[i] += acceleration[i];
-										}
-										step_counter[i]++;
+										step_counter(i)++;
 										previous_micros[i] = current_micros[i];
 								}
 						}
 				}
 		}
-		// return steps;
+		return step_counter;
 }
+
+
+
+
 
 Kinematic_Chain<6> k;
 //      theta,          alpha,          d,      a
@@ -288,7 +272,7 @@ Link l5(1.74533E-06,    1.570796327,    0,      0);
 Link l6(3.141592654,    0,              -165,   0);
 
 void setup(){
-		Serial.begin(112500);
+		Serial.begin(2000000);
 		k.add_link(l1);
 		k.add_link(l2);
 		k.add_link(l3);
@@ -306,88 +290,140 @@ void setup(){
 						digitalWrite(ena_pin[i], LOW);
 				}
 		}
+
+		for(byte i=0; i<4; i++) {
+				pinMode(18+i, INPUT);
+				digitalWrite(18+i, HIGH);
+				attachInterrupt(digitalPinToInterrupt(18+i), interrupt_lim_sw, RISING);
+		}
 }
 
-void read_controller(byte num_axis){
-		const int max_deadzone = 540;
-		const int min_deadzone = 494;
-		int js_read[num_axis] = {};
-		int speed_joystick[num_axis] = {};
-		bool dir[num_axis] = {};
+const float max_cart[6] = {0,0,824.941,0,0};
+const float min_cart[6] = {0,0,0,0,0};
 
-		for(byte i=0; i<num_axis; i++) {
-				js_read[i] = analogRead(i);
-				if (js_read[i]>max_deadzone or js_read[i]<min_deadzone) {
-						if (js_read[i]<512) {
-								dir[i] = 0;
-						}else{
-								dir[i] = 1;
+float target[6] = {6.719464414,1.17277E-05,824.941,-90,1.0001,-90.0001};
+float initial[5] = {0.000101403,-90.00551392,1.010864267,0.055450441,-0.019782341};
+float degree[5]; bool dir[5];
+
+void loop(){
+		while(stop == false) {
+				int js_read[4] = {};
+				int js_mult[4] = {};
+				bool sign[4] = {};
+				float target_diff[6] = {0,0,0,0,0,0};
+				bool NAN_flag = 0;
+
+				for(byte i=0; i<4; i++) {
+						js_read[i] = analogRead(i);
+						if (js_read[i]>555 or js_read[i]<500) {
+								js_mult[i] = abs(js_read[i]-512)/128;
+
+								if (js_read[i]<512 and target_diff[i] < max_cart[i]) {
+										target_diff[i] += js_mult[i];
+								}else if(js_read >= 512 and target_diff[i] > min_cart[i]) {
+										target_diff[i] -= js_mult[i];
+								}
+
+								for(byte i=0; i<6; i++) {
+										target[i] = target[i] - target_diff[i];
+								}
+								Matrix<6> angles = k.inverse_kinematics(target);
+
+								for(byte i=0; i<5; i++) {
+										degree[i] = angles(i) - initial[i];
+										initial[i] = initial[i] + degree[i];
+										if(degree[i]<0) {
+												dir[i] = 1;
+												degree[i] = abs(degree[i]);
+										}else{
+												dir[i] = 0;
+										}
+
+										if(degree[i] > max_rot[i]) {
+												degree[i] = max_rot[i];
+												Serial.print(i);
+												Serial.print(" Max rot limited to: ");
+												Serial.println(max_rot[i]);
+										}else if(degree[i] < min_rot[i]) {
+												degree[i] = min_rot[i];
+												Serial.print(i);
+												Serial.print(" Min rot limited to: ");
+												Serial.println(min_rot[i]);
+										}
+										// Serial.write(12);
+										// Serial << i << ": " << target[i] << ", ";
+										// Serial.println(k.chain[i]->theta * 180/M_PI);
+
+										if (degree[i] == NAN) {
+												NAN_flag = 1;
+										}
+								}
+								if (NAN_flag = 1) {
+										Matrix<5> steps = move_joints(dir, degree, speed_initial, speed_target, acceleration);
+										for(byte i=0; i<5; i++) {
+												k.chain[i]->theta = steps(i)*step_deg[i]*microstep[i];
+										}
+										// Serial.println("HERE");
+										joint_velocity();
+								}
 						}
-						speed_joystick[i] = abs(js_read[i]-512)*4;
 				}
 		}
 }
 
-//Controller input modifies target_diff
-// - or + based on direction
-// map read value as multiplier
 
-// FLOW
-// loop over joystick inputs
-// modify target_diff based on input
-// calculate inverse kinematics
-// rotate joints
-// if kinematics take too long to apply, use millis timer to limit controller input
+void interrupt_lim_sw(){
+		static unsigned int interrupt_previous_millis = 0;
+		unsigned int interrupt_millis = millis();
 
-void loop(){
-		while(stop == false) {
-				Serial.println("Start");
-				float target_initial[6] = {6.719464414,1.17277E-05,824.941,-90,1.0001,-90.0001};
-				float target_diff[6] = {0,0,0,0,0,0};
-				float target[6];
+		if(interrupt_millis - interrupt_previous_millis > 20) {
+				for(int i=0; i<4; i++) {
+						if (digitalRead(18+i) == HIGH) {
+								limit_switches[i] = HIGH;
+						}
+						Serial.println(limit_switches[i]);
+				}
+		}
+		interrupt_previous_millis = interrupt_millis;
+}
+
+Matrix<3,1> cross_prod(Matrix<3,1> x, Matrix<3,1> y){
+		Matrix<3,1> ret;
+		ret(0,0) = x(1,0)*y(2,0) - x(2,0)*y(1,0);
+		ret(1,0) = x(2,0)*y(0,0) - x(0,0)*y(2,0);
+		ret(2,0) = x(0,0)*y(1,0) - x(1,0)*y(0,0);
+
+		return ret;
+}
+
+void joint_velocity(){
+		Matrix<4,4> fk[6];
+		Matrix<3,1> d_0[6], r_0[6], cross[6];
+		float velocities[6][6]={};
+		Matrix<4,4> d;
+		d.Fill(0);
+		d(0,0)= 1;
+		d(1,1)= 1;
+		d(2,2)= 1;
+		d(3,3)= 1;
+
+		d_0[5] = k.chain[5]->get_transformation_matrix().Submatrix(Slice<0,3>(), Slice<3,4>());
+		// d_0[5] = k.forward_kinematics(5).Submatrix(Slice<0,3>(), Slice<3,4>());
+
+		for (byte i=0; i<6; i++) {
+				fk[i] = k.chain[i]->get_transformation_matrix();
+				// fk[i] = k.forward_kinematics(i);
+				d_0[i] = d_0[5] - fk[i].Submatrix(Slice<0,3>(), Slice<3,4>());
+				r_0[i] = fk[i].Submatrix(Slice<0,3>(), Slice<2,3>());
+				cross[i] = cross_prod(d_0[i], r_0[i]);
+		}
+
+		for(byte j=0; j<3; j++) {
+				Serial << "---" << j << "---\n";
 				for(byte i=0; i<6; i++) {
-						target[i] = target_initial[i] - target_diff[i];
+						velocities[j][i] = cross[i](j,0);
+						velocities[j+3][i] = r_0[i](j);
+						Serial.println(velocities[j][i],10);
 				}
-				Matrix<6> angles = k.inverse_kinematics(target);
-
-				float initial[5] = {0.000101403,-90.00551392,1.010864267,0.055450441,-0.019782341};
-
-				float degree[5]; bool dir[5];
-
-				for(byte i=0; i<5; i++) {
-						degree[i] = angles(i) - initial[i];
-						if(degree[i]<0) {
-								dir[i] = 1;
-								degree[i] = abs(degree[i]);
-						}else{
-								dir[i] = 0;
-						}
-
-						if(degree[i] > max_rot[i]) {
-								degree[i] = max_rot[i];
-								Serial.print(i);
-								Serial.print(" Max rot limited to: ");
-								Serial.println(max_rot[i]);
-						}else if(degree[i] < min_rot[i]) {
-								degree[i] = min_rot[i];
-								Serial.print(i);
-								Serial.print(" Min rot limited to: ");
-								Serial.println(min_rot[i]);
-						}
-						Serial.print(i);
-						Serial.print(": ");
-						Serial.println(degree[i]);
-				}
-
-				Matrix<6> steps = move_joints(dir, degree, speed_initial, speed_target, acceleration);
-
-				for(byte i=0; i<5; i++) {
-						steps(i) = degree[i]/step_deg[i] * microstep[i];
-						degree[i] = steps(i)*step_deg[i]*microstep[i];
-				}
-
-
-				Serial.println("DONE!");
-				stop = true;
 		}
 }
