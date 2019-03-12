@@ -13,7 +13,7 @@ float speed_rads[5] = {};
 float gear_ratio[5] = {10.2,6.58333,27.0835,1,4.7};
 
 float step_deg[5] = {0.08823529, 0.27, 0.072, 1.8, 0.38297872};
-int microstep[5] = {8,8,8,16,16};
+int microstep[5] = {8,8,16,16,16};
 
 bool stop = false;
 
@@ -226,13 +226,14 @@ Matrix<6> position_from_matrix(Matrix<4,4> matrix){
 	return return_matrix;
 }
 
-void move_joints(bool dir[5], float degree[5], float speed_rads[5]){
+void move_joints(Kinematic_Chain<6> k, bool dir[5], float degree[5], float speed_rads[5]){
 	long current_micros[5]={}, previous_micros[5]={};
 	float speed_period_2[5]={};
 	int max_steps=0, step_counter[5]={};
 	int steps[5]={};
 	bool toggle[5]={};
 	byte index=0;
+	Matrix<6,6> ret_velocities;
 
 	for(byte i=0; i<5; i++) {
 		digitalWrite(dir_pin[i], dir[i]);
@@ -242,11 +243,22 @@ void move_joints(bool dir[5], float degree[5], float speed_rads[5]){
 			index = i;
 		}
 
-		speed_period_2[i] = ((1/(speed_rads[i])) / (gear_ratio[i] * microstep[i]))*2000/2;
-		Serial << i << ": " << speed_period_2[i] << "\n";
+
 	}
 
 	while(max_steps > step_counter[index]) {
+		ret_velocities = velocities(k);
+
+		for(byte j=0; j<6; j++) {
+			theta_velocities[j] = 0;
+			for(byte i=0; i<6; i++) {
+				theta_velocities[j] += ret_velocities(j,i) * cart_velocities[j];
+			}
+			speed_rads[j] = abs(theta_velocities[j]);
+		}
+		speed_period_2[i] = ((1/(speed_rads[i])) / (gear_ratio[i] * microstep[i]))/2;
+		Serial << i << ": " << speed_period_2[i] << "\n";
+
 		for(byte i=0; i<5; i++) {
 			if (step_counter[i] < steps[i]) {
 				current_micros[i] = micros();
@@ -261,57 +273,57 @@ void move_joints(bool dir[5], float degree[5], float speed_rads[5]){
 	}
 }
 
-void calibration(Kinematic_Chain<6> k){
-	long current_micros[5], previous_micros[5] = {};
-	bool calibration_direction[5] = {0,1,0,0,1};
-	float calibration_speed[5] = {2000,2000,800,2000,2000};
-	float calibration_theta[5] = {80,-100,100,90,-80};
-
-	bool stop = false;
-	bool toggle[5] = {};
-
-	for(byte i=0; i<5; i++) {
-		digitalWrite(dir_pin[i], calibration_direction[i]);
-	}
-
-	// Check if limit switches are toggled before prog start
-	for(byte i=0; i<5; i++) {
-		if (digitalRead(lim_pin[i]) == 1) {
-			limit_switches[i] = 1;
-		}
-	}
-
-	// Run to limits
-	while(stop != true) {
-		stop = true;
-		for(byte i=0; i<5; i++) {
-			if (limit_switches[i] == 0) {
-				stop = false;
-			}
-		}
-		for(byte i=0; i<5; i++) {
-			if (digitalRead(lim_pin[i]) == true) {
-				limit_switches[i] = true;
-				Serial.println(i);
-			}
-			if (limit_switches[i] == false) {
-				Serial << pul_pin[i] << "\n";
-				current_micros[i] = micros();
-				if (current_micros[i] - previous_micros[i] >= calibration_speed[i]) {
-					toggle[i] = !toggle[i];
-					digitalWrite(pul_pin[i], toggle[i]);
-					previous_micros[i] = current_micros[i];
-				}
-			}
-		}
-	}
-
-	Serial.println("REVERSING");
-	bool reverse_direction[5] = {1,0,1,1,0};
-	// float reverse_degree[5] = {77,88,100,230,120};
-	float reverse_degree[5] = {10,0,0,0,0};
-	move_joints(reverse_direction, reverse_degree, calibration_speed);
-}
+// void calibration(Kinematic_Chain<6> k){
+//      long current_micros[5], previous_micros[5] = {};
+//      bool calibration_direction[5] = {0,1,0,0,1};
+//      float calibration_speed[5] = {2000,2000,800,2000,2000};
+//      float calibration_theta[5] = {80,-100,100,90,-80};
+//
+//      bool stop = false;
+//      bool toggle[5] = {};
+//
+//      for(byte i=0; i<5; i++) {
+//              digitalWrite(dir_pin[i], calibration_direction[i]);
+//      }
+//
+//      // Check if limit switches are toggled before prog start
+//      for(byte i=0; i<5; i++) {
+//              if (digitalRead(lim_pin[i]) == 1) {
+//                      limit_switches[i] = 1;
+//              }
+//      }
+//
+//      // Run to limits
+//      while(stop != true) {
+//              stop = true;
+//              for(byte i=0; i<5; i++) {
+//                      if (limit_switches[i] == 0) {
+//                              stop = false;
+//                      }
+//              }
+//              for(byte i=0; i<5; i++) {
+//                      if (digitalRead(lim_pin[i]) == true) {
+//                              limit_switches[i] = true;
+//                              Serial.println(i);
+//                      }
+//                      if (limit_switches[i] == false) {
+//                              Serial << pul_pin[i] << "\n";
+//                              current_micros[i] = micros();
+//                              if (current_micros[i] - previous_micros[i] >= calibration_speed[i]) {
+//                                      toggle[i] = !toggle[i];
+//                                      digitalWrite(pul_pin[i], toggle[i]);
+//                                      previous_micros[i] = current_micros[i];
+//                              }
+//                      }
+//              }
+//      }
+//
+//      Serial.println("REVERSING");
+//      bool reverse_direction[5] = {1,0,1,1,0};
+//      // float reverse_degree[5] = {77,88,100,230,120};
+//      float reverse_degree[5] = {10,0,0,0,0};
+//      move_joints(reverse_direction, reverse_degree, calibration_speed);
+// }
 
 Matrix<3,1> cross_prod(Matrix<3,1> x, Matrix<3,1> y){
 	Matrix<3,1> ret;
@@ -321,17 +333,15 @@ Matrix<3,1> cross_prod(Matrix<3,1> x, Matrix<3,1> y){
 	return ret;
 }
 
-Matrix<6,6> velocities(Kinematic_Chain<6> k, float temp_thetas[6]){
+Matrix<6,6> velocities(Kinematic_Chain<6> k){
 	Matrix<4,4> tf[6], fk={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 	Matrix<3,1> d_0[6], r_0[6], cross[6];
 	Matrix<6,6> joint_velocities, inv_joint_velocities;
 
-	tf[0] = k.chain[0]->get_transformation_matrix(temp_thetas[0]);
-	// tf[0] = k.chain[0]->get_transformation_matrix();
+	tf[0] = k.chain[0]->get_transformation_matrix();
 
 	for(byte i=0; i<6; i++) {
-		// fk = fk*k.chain[i]->get_transformation_matrix();
-		fk = fk*k.chain[i]->get_transformation_matrix(temp_thetas[i]);
+		fk = fk*k.chain[i]->get_transformation_matrix();
 		tf[i] = fk;
 	}
 
@@ -353,6 +363,31 @@ Matrix<6,6> velocities(Kinematic_Chain<6> k, float temp_thetas[6]){
 
 	return inv_joint_velocities;
 }
+
+// Matrix<6,6> velocities(Kinematic_Chain<6> k){
+//      Matrix<4,4> tf[6];
+//      Matrix<3,1> d_0[6], r_0[6], cross[6];
+//      Matrix<6,6> joint_velocities, inv_joint_velocities;
+//
+//      d_0[5] = k.forward_kinematics(5).Submatrix(Slice<0,3>(), Slice<3,4>());
+//
+//      for (byte i=0; i<6; i++) {
+//              tf[i] = k.forward_kinematics(i);
+//              d_0[i] = d_0[5] - tf[i].Submatrix(Slice<0,3>(), Slice<3,4>());
+//              r_0[i] = tf[i].Submatrix(Slice<0,3>(), Slice<2,3>());
+//              cross[i] = cross_prod(d_0[i], r_0[i]);
+//      }
+//
+//      for(byte j=0; j<3; j++) {
+//              for(byte i=0; i<6; i++) {
+//                      joint_velocities(j,i) = cross[i](j,0);
+//                      joint_velocities(j+3,i) = r_0[i](j);
+//              }
+//      }
+//      inv_joint_velocities = joint_velocities.Inverse();
+//
+//      return inv_joint_velocities;
+// }
 
 Kinematic_Chain<6> k;
 //      theta,          alpha,          d,      a
@@ -395,7 +430,7 @@ const float max_cart[6] = {500,500,824.941,500,500};
 const float min_cart[6] = {-500,-500,-500,-500,-500};
 
 float target[6] = {6.719464414,1.17277E-05,824.941,-90,1.0001,-90.0001};
-float initial[6] = {0.000101403,-90.00551392,1.010864267,0.055450441,-0.019782341,-0.055450441}; //CHECK THIS LAST VALUE
+float initial[6] = {0.000101403,-90.00551392,1.010864267,0.055450441,-0.019782341,-0.055450441,}; //CHECK THIS LAST VALUE
 float degree[6]; bool dir[5];
 Matrix<6,6> ret_velocities;
 float theta_velocities[6];
@@ -404,11 +439,9 @@ float cart_velocities[6] = {0.1,0.1,0.1,0.1,0.1,0.1};
 long current_micros[5]={}, previous_micros[5]={};
 float speed_period_2[5]={};
 int step_counter[5]={};
-signed int steps[5]={};
+int steps[5]={};
 bool toggle[5]={};
 byte index=0;
-float temp_thetas[6]={0.000101403,-90.00551392,1.010864267,0.055450441,-0.019782341,-0.055450441};
-float initial_thetas[6]={0.000101403,-90.00551392,1.010864267,0.055450441,-0.019782341,-0.055450441};
 
 void loop(){
 	while(stop == false) {
@@ -422,7 +455,7 @@ void loop(){
 		// stop = true;
 
 		int js_read[4] = {};
-		float js_mult[4] = {0.00001,0.00001,0.00001,0.00001};
+		float js_mult[4] = {0.000001,0.000001,0.000001,0.000001};
 		float target_diff[6] = {0,0,0,0,0,0};
 		bool NAN_flag = 0;
 
@@ -436,26 +469,37 @@ void loop(){
 				}else if(js_read[i] >= 512 and target_diff[i] > min_cart[i]) {
 					target_diff[i] -= js_mult[i];
 				}
+
 				for(byte i=0; i<6; i++) {
 					target[i] = target[i] - target_diff[i];
 				}
-
 				Matrix<6> angles = k.inverse_kinematics(target);
+
+				ret_velocities = velocities(k);
+
+				for(byte j=0; j<6; j++) {
+					theta_velocities[j] = 0;
+					for(byte i=0; i<6; i++) {
+						theta_velocities[j] += ret_velocities(j,i) * cart_velocities[j];
+					}
+
+					speed_rads[j] = abs(theta_velocities[j]);
+					// Serial << j << ": ";
+					// Serial.println(speed[j],10);
+				}
+
 
 				for(byte i=0; i<5; i++) {
 					degree[i] = angles(i) - initial[i];
 					initial[i] = initial[i] + degree[i];
-					Serial << " deg: "<< degree[i];
+
 					if(degree[i]<0) {
-						steps[i] -= (degree[i]/step_deg[i] * microstep[i])*2;
+						dir[i] = 1;
 						degree[i] = abs(degree[i]);
-						Serial.print("minus");
 					}else{
-						steps[i] += (degree[i]/step_deg[i] * microstep[i])*2;
-						Serial.print("plus");
+						dir[i] = 0;
 					}
 
-					Serial <<" step: " << steps[i];
 					if(degree[i] > max_rot[i]) {
 						degree[i] = max_rot[i];
 						Serial.print(i);
@@ -468,55 +512,37 @@ void loop(){
 						Serial.println(min_rot[i]);
 					}
 				}
-				Serial.println("");
-
-
-				for(byte i=0; i<5; i++) {
-					// temp_thetas[i] = step_counter[i]*step_deg[i]*microstep[i]-initial_thetas[i];
-					// initial_thetas[i] = initial_thetas[i] + temp_thetas[i];
-					// Serial.print(steps[i]);
-					// Serial.print(", ");
-					ret_velocities = velocities(k, temp_thetas);
-					for(byte j=0; j<6; j++) {
-						theta_velocities[j] = 0;
-						for(byte i=0; i<6; i++) {
-							theta_velocities[j] += ret_velocities(j,i) * cart_velocities[j];
-						}
-						speed_rads[j] = abs(theta_velocities[j]);
-					}
-					// speed_period_2[i] = ((1/(speed_rads[i])) / (gear_ratio[i] * microstep[i]))*2000/2;
-					// speed_period_2[i] = 100;
-
-				}
-
-				// Serial.print("\n");
+				move_joints(k, dir, degree, speed_rads);
 				// for(byte i=0; i<5; i++) {
-				// Serial << i << " Counter : " << step_counter[i] << ", Steps: " <<steps[i];
-				// if (steps[i] > 0 or steps[i] < 0) {
-				//      current_micros[i] = micros();
-				//      if (current_micros[i] - previous_micros[i] >= speed_period_2[i]) {
-				//              // Serial.println(i);
-				//              toggle[i] = !toggle[i];
-				//              digitalWrite(pul_pin[i], toggle[i]);
+				//      digitalWrite(dir_pin[i], dir[i]);
+				//      steps[i] += (degree[i]/step_deg[i] * microstep[i])*2;
 				//
-				//              if (steps[i] > 0) {
-				//                      steps[i]--;
-				//                      step_counter[i]++;
-				//                      digitalWrite(dir_pin[i], 0);
-				//              } else {
-				//                      steps[i]++;
-				//                      step_counter[i]--;
-				//                      digitalWrite(dir_pin[i], 1);
-				//              }
-				//              previous_micros[i] = current_micros[i];
-				//      }
+				//      speed_period_2[i] = ((1/(speed_rads[i])) / (gear_ratio[i] * microstep[i]))*2000/2;
+				//      Serial << i << ": " << speed_period_2[i] << "\n";
 				// }
+
+				// if (NAN_flag = 1) {
+				// Matrix<5> steps = move_joints(dir, degree, speed_initial, speed_target, acceleration);
+				// for(byte i=0; i<5; i++) {
+				// k.chain[i]->theta = steps(i)*step_deg[i]*microstep[i];
+				// }
+				// Serial.println("HERE");
 			}
 		}
+		// for(byte i=0; i<5; i++) {
+		//      if (steps[i] > 0) {
+		//              current_micros[i] = micros();
+		//              if (current_micros[i] - previous_micros[i] >= speed_period_2[i]) {
+		//                      Serial.println(i);
+		//                      toggle[i] = !toggle[i];
+		//                      digitalWrite(pul_pin[i], toggle[i]);
+		//                      steps[i]--;
+		//                      previous_micros[i] = current_micros[i];
+		//              }
+		//      }
+		// }
 	}
-	// stop = true;
 }
-
 
 void interrupt_lim_sw(){
 	for(int i=0; i<5; i++) {
