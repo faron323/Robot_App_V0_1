@@ -454,7 +454,7 @@ Link l5(1.74533E-06,    1.570796327,    0,      0);
 Link l6(3.141592654,    0,              -170,   0);
 
 void setup(){
-		// Serial.begin(2000000);
+		Serial.begin(2000000);
 		k.add_link(l1);
 		k.add_link(l2);
 		k.add_link(l3);
@@ -672,7 +672,7 @@ void joint_controller_loop(Kinematic_Chain<6> k) {
 
 								if (current_micros[i] - previous_micros[i] >= speed_initial[i] - speed_current[i]) {
 										// if (digitalRead(lim_pin[i]) == false or dir[i] !=  calibration_direction[i]) {
-										// Serial.println(i);
+										Serial.println(current_micros[i] - previous_micros[i]);
 										// Serial << i << ": cur: "<< speed_current[i]<< " joy: "<< speed_joystick[i] <<"\n";
 										// degrees[i] = ((step_counter[i]/2) * step_deg[i] / microstep[i])  * M_PI/180;
 										// k.chain[i]->theta = k.chain[i]->theta + degrees[i] - previous_degrees[i];
@@ -708,17 +708,17 @@ void joint_controller_loop(Kinematic_Chain<6> k) {
 								// }
 						}
 
-						// if (i == 5) {
-						//      current_millis = millis();
-						//      if (current_millis - previous_millis >= servo_refresh_rate) {
-						//              if(lock_gripper == false) {
-						//                      servo_angle = map(js_read[5], 0, 1023, 110, 20);
-						//                      gripper_servo.write(servo_angle);
-						//                      // Serial.println(servo_angle);
-						//                      previous_millis = current_millis;
-						//              }
-						//      }
-						// }
+						if (i == 5) {
+								current_millis = millis();
+								if (current_millis - previous_millis >= servo_refresh_rate) {
+										if(lock_gripper == false) {
+												servo_angle = map(js_read[5], 0, 1023, 110, 20);
+												gripper_servo.write(servo_angle);
+												// Serial.println(servo_angle);
+												previous_millis = current_millis;
+										}
+								}
+						}
 				}
 		}
 }
