@@ -671,6 +671,7 @@ void joint_controller_loop(Kinematic_Chain<6> k) {
 								current_micros[i] = micros();
 
 								if (current_micros[i] - previous_micros[i] >= speed_initial[i] - speed_current[i]) {
+										previous_micros[i] = current_micros[i];
 										// if (digitalRead(lim_pin[i]) == false or dir[i] !=  calibration_direction[i]) {
 										Serial.println(current_micros[i] - previous_micros[i]);
 										// Serial << i << ": cur: "<< speed_current[i]<< " joy: "<< speed_joystick[i] <<"\n";
@@ -702,7 +703,7 @@ void joint_controller_loop(Kinematic_Chain<6> k) {
 										//      step_counter[i]++;
 										// }
 
-										previous_micros[i] = current_micros[i];
+
 										// }
 								}
 								// }
