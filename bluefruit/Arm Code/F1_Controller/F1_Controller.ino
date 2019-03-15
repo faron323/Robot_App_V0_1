@@ -1,3 +1,16 @@
+// CONTROLLER PINS
+// Connect all 5V and GND to breadboard linking to arduino 5v/Gnd
+// If joystick is controlling the wrong axis you can switch the Y/X axis pins around
+// Pressing in on joystick 3 will lock the servo into place for the gripper
+// Switches for joysticks 1 and 2 dont have to be plugged in because they arn't being used
+// Make sure the arm is in the initial upright position so the constraints work properly
+// If controller stops working or slows down just power cycle the arduino
+
+// JOYSTICK NUMBER |  SW (Digital Pins) | Y Axis    | X Axis  |
+//       1         |  21                | A0        | A1      |
+//       2         |  20                | A2        | A3      |
+//       3         |  19                | A5        | A4      |
+
 #include "Geometry/Geometry.h"
 #include <Servo.h>
 
@@ -454,7 +467,7 @@ Link l5(1.74533E-06,    1.570796327,    0,      0);
 Link l6(3.141592654,    0,              -170,   0);
 
 void setup(){
-		Serial.begin(2000000);
+		// Serial.begin(2000000);
 		k.add_link(l1);
 		k.add_link(l2);
 		k.add_link(l3);
@@ -647,8 +660,8 @@ void joint_controller_loop(Kinematic_Chain<6> k) {
 		bool dir[5] = {};
 		float degrees[5] = {}, previous_degrees[5] = {};
 
-		// int cw_limit[5] =  {-3000,   -3000,   -6000,   -3000,   -6000};
-		// int ccw_limit[5] = {3000,   3000,   3000,   800,   6000};
+		int cw_limit[5] =  {-3000,   -3000,   -3000,   -1800,   -6000};
+		int ccw_limit[5] = {3000,   3000,   3000,   1800,   6000};
 		long previous = 0;
 
 		for(int i=0; i<5; i++) {
@@ -672,8 +685,9 @@ void joint_controller_loop(Kinematic_Chain<6> k) {
 
 								if (current_micros[i] - previous_micros[i] >= speed_initial[i] - speed_current[i]) {
 										previous_micros[i] = current_micros[i];
+										Serial.println(step_counter[i]);
 										// if (digitalRead(lim_pin[i]) == false or dir[i] !=  calibration_direction[i]) {
-										Serial.println(current_micros[i] - previous_micros[i]);
+										// Serial.println(current_micros[i] - previous_micros[i]);
 										// Serial << i << ": cur: "<< speed_current[i]<< " joy: "<< speed_joystick[i] <<"\n";
 										// degrees[i] = ((step_counter[i]/2) * step_deg[i] / microstep[i])  * M_PI/180;
 										// k.chain[i]->theta = k.chain[i]->theta + degrees[i] - previous_degrees[i];
@@ -688,25 +702,25 @@ void joint_controller_loop(Kinematic_Chain<6> k) {
 										// Serial <<"\n";
 										// Serial.println(k.chain[i]->theta * 180/M_PI);
 
-										// if((dir[i] == 0 and step_counter[i] > cw_limit[i])or (dir[i] == 1 and step_counter[i] < ccw_limit[i])) {
-										toggle[i] = !toggle[i];
-										digitalWrite(pul_pin[i], toggle[i]);
+										if((dir[i] == 0 and step_counter[i] > cw_limit[i])or (dir[i] == 1 and step_counter[i] < ccw_limit[i])) {
+												toggle[i] = !toggle[i];
+												digitalWrite(pul_pin[i], toggle[i]);
 
-										if (speed_current[i] < speed_joystick[i]) {
-												speed_current[i] += acceleration[i];
-										} else if (speed_current[i] > speed_joystick[i]) {
-												speed_current[i] = speed_joystick[i];
+												if (speed_current[i] < speed_joystick[i]) {
+														speed_current[i] += acceleration[i];
+												} else if (speed_current[i] > speed_joystick[i]) {
+														speed_current[i] = speed_joystick[i];
+												}
+												if (dir[i] == 0) {
+														step_counter[i]--;
+												}else{
+														step_counter[i]++;
+												}
+
+
+												// }
 										}
-										// if (dir[i] == 0) {
-										//      step_counter[i]--;
-										// }else{
-										//      step_counter[i]++;
-										// }
-
-
-										// }
 								}
-								// }
 						}
 
 						if (i == 5) {

@@ -4,12 +4,14 @@ const int dir_pin[] = {23, 25, 27, 29, 31};
 const int ena_pin[] = {22, 24, 26, 28, 30};
 
 //Direction (0:Clockwise, 1: Anti-CW)
+// MODIFY DEGREES TO CHANGE HOW FAR THE ARM WILL ROTATE PER AXIS
+// IF LOOP STOPS POWER CYCLE THE ARDUINO
 
-float degree[5] = {30,    20,   50,    45,  0};
-bool dir[5] = {1,    0,    0,    0, 0};
+float degree[5] = {40,    40,   50,    45,  0};
+bool dir[5] = {0,    1,    0,    0, 0};
 
 int speed_initial[5] = {2000, 2000, 2000,  2000, 2000};
-int speed_target[5] =  {1000,  1000,  1000,   1000, 1000};
+int speed_target[5] =  {1000,  1000,  800,   1000, 1000};
 int acceleration[5] =  {1,    1,    1,     1,    1};
 
 bool stop = false;
