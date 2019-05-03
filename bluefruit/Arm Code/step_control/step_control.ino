@@ -12,7 +12,7 @@ void setup() {
 		pinMode(pul_pin[i], OUTPUT);
 		pinMode(dir_pin[i], OUTPUT);
 		pinMode(ena_pin[i], OUTPUT);
-		digitalWrite(ena_pin[i], LOW);
+		digitalWrite(ena_pin[i], LOW);//Might have to change LOW to HIGH depending on the drivers your using
 	}
 	Serial.begin(2000000);
 }
