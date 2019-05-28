@@ -1,5 +1,15 @@
 from evdev import InputDevice, categorize, ecodes, ff
 import serial
+from connect import Arduino
+
+arm = Arduino(port=0)
+
+# if event.value == 1:  # Press
+#     pass
+# else:  # Lift
+#     pass
+
+# For all Buttons, 1 = Press, 0 = Lift
 
 # Controller Constants
 # Shape Buttons
@@ -13,6 +23,7 @@ down_l = 545
 left_l = 546
 right_l = 547
 
+ps = 316
 start = 315
 select = 314
 
@@ -24,8 +35,11 @@ rb_trig = 313
 l_stick = 317
 r_stick = 318
 
+up_bound = 150
+low_bound = 110
+
 try:
-    gamepad = InputDevice('/dev/input/event1')
+    gamepad = InputDevice('/dev/input/event2')
     print(gamepad)
 
     rumble = ff.Rumble(strong_magnitude=0x1fff, weak_magnitude=0xffff)
@@ -46,76 +60,81 @@ try:
     effect_id1 = gamepad.upload_effect(effect)
 
     for event in gamepad.read_loop():
+
         if event.type == ecodes.EV_KEY:
             if event.value == 1:
                 if event.code == up_r:
-                    print("triangle")
+                    arm.write("a")
                 elif event.code == down_r:
-                    print("x")
+                    arm.write("b")
                 elif event.code == left_r:
-                    print("square")
+                    arm.write("c")
                 elif event.code == right_r:
-                    print("circle")
-
+                    arm.write("d")
                 elif event.code == up_l:
-                    print("up")
+                    arm.write("e")
                 elif event.code == down_l:
-                    print("down")
+                    arm.write("f")
                 elif event.code == left_l:
-                    print("left")
+                    arm.write("g")
                 elif event.code == right_l:
-                    print("right")
+                    arm.write("h")
 
-                elif event.code == start:
+                elif event.code == ps:
                     gamepad.write(ecodes.EV_FF, effect_id1, 1)
-                    print("start")
+                elif event.code == start:
+                    arm.write("i")
                 elif event.code == select:
-                    print("select")
+                    arm.write("j")
 
                 elif event.code == l_trig:
-                    print("left bumper")
+                    arm.write("k")
                 elif event.code == r_trig:
-                    print("right bumper")
+                    arm.write("l")
                 elif event.code == lb_trig:
-                    print("left back bumper")
+                    arm.write("m")
                 elif event.code == rb_trig:
-                    print("right back bumper")
+                    arm.write("n")
                 elif event.code == l_stick:
-                    print("left stick in")
+                    arm.write("o")
                 elif event.code == r_stick:
-                    print("right stick in")
+                    arm.write("p")
 
         if event.type == ecodes.EV_ABS:
             absevent = categorize(event)
-            print(absevent.event.value)
-            # print(ecodes.bytype[absevent.event.type][absevent.event.code])
-            if ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_Y":
-                print(absevent.event.value)
+            if ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_X":
+                if absevent.event.value > up_bound or absevent.event.value < low_bound:
+                    arm.write("x")
+                    arm.write(str(absevent.event.value))
                 pass
-            elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_X":
-                # if absevent.event.value < 110:
-                print(absevent.event.value)
+            elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_Y":
+                if absevent.event.value > up_bound or absevent.event.value < low_bound:
+                    arm.write("y")
+                    arm.write(str(absevent.event.value))
                 pass
-            elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_RY":
+            elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_Z":
+                if absevent.event.value > up_bound or absevent.event.value < low_bound:
+                    arm.write("z")
+                    arm.write(str(absevent.event.value))
                 pass
             elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_RX":
+                if absevent.event.value > up_bound or absevent.event.value < low_bound:
+                    arm.write("u")
+                    arm.write(str(absevent.event.value))
                 pass
-            else:
-                print(ecodes.bytype[absevent.event.type][absevent.event.code])
+            elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_RY":
+                if absevent.event.value > up_bound or absevent.event.value < low_bound:
+                    arm.write("v")
+                    arm.write(str(absevent.event.value))
                 pass
-            # elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_Z":
-            #     print("HERE")
-            #     pass
-            # elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_RZ":
-            #     print("HERE")
-            #     pass
+
+            elif ecodes.bytype[absevent.event.type][absevent.event.code] == "ABS_RZ":
+                if absevent.event.value > up_bound or absevent.event.value < low_bound:
+                    arm.write("w")
+                    arm.write(str(absevent.event.value))
+                pass
 
 except Exception as e:
+    print(e)
+    # print("Controller Not Connected")
     pass
-print("Controller Not Connected")
-
-
-def arduino_read(*args, **kwargs):
-    ser = serial.Serial('/dev/ttyACM0', 9600)
-    input = ser.read()
-    print(input)
