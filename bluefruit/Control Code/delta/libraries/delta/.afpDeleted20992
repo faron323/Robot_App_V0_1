@@ -1,0 +1,57 @@
+#include <delta.h>
+
+DeltaArm::DeltaArm(int sideBase, int sidePlatform, int upperLegLength, int lowerLegLength, int lowerLegWidth){
+		for(int i=0; i<3; i++) {
+				angles[i] = 0;
+		}
+
+		Sb = sideBase;
+		Sp = sidePlatform;
+		L = upperLegLength;
+		l = lowerLegLength;
+		h = lowerLegWidth;
+
+		Wb = 0.28867513459*Sb;
+		Ub = 0.57735026919*Sb;
+		Wp = 0.28867513459*Sp;
+		Up = 0.57735026919*Sp;
+
+		a = Wb - Up;
+		b = Sp/2 - 0.86602540378*Wb;
+		c = Wp - Wb/2;
+};
+
+void DeltaArm::inverseKinematics(float x, float y, float z){
+
+		float E[3];
+		float F[3];
+		float G[3];
+
+		E[1] = 2*L(y+a);
+		F[1] = 2*z*L;
+		G[1] = sqr(x)+sqr(y)+sqr(z)+sqr(a)+sqr(L)+2*y*a-sqr(l);
+
+		E[2] = -L*(1.73205080757*(x+b)+y+c);
+		F[2] = 2*z*L;
+		G[2] = sqr(x)+sqr(y)+sqr(z)+sqr(b)+sqr(c)+sqr(L)+2 (x*b+y*c)-sqr(l);
+
+		E[3] = L*(1.73205080757*(x-b)-y-c);
+		F[3] = 2*z*L;
+		G[3] = sqr(x)+sqr(y)+sqr(z)+sqr(b)+sqr(c)+sqr(L)+2 (-x*b+y*c)-sqr(l);
+
+		// float anglesA[3],anglesB[3];
+
+
+		for(int i=0; i<3; i++) {
+				float T1a = 2*atan2((-F[i]+sqrt(sqr(E[i])+sqr(F[i])+sqr(G[i]))), (G[i] - E[i]));
+				float T1b = 2*atan2((-F[i]-sqrt(sqr(E[i])+sqr(F[i])+sqr(G[i]))), (G[i] - E[i]));
+				anglesA[i] =1.57 + (T1a >= 0) * T1a + (T1a < 0) * (6.28 + T1a);
+				anglesB[i] =1.57 + (T1b >= 0) * T1b + (T1b < 0) * (6.28 + T1b);
+				Serial.print(i);
+				Serial.print(" angle [a]: ");
+				Serial.println(anglesA[i]);
+				Serial.print(i);
+				Serial.print(" angle [b]: ");
+				Serial.println(anglesB[i]);
+		};
+};

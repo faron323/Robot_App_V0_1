@@ -1,0 +1,30 @@
+#ifndef DELTA_h
+#define DELTA_h
+
+class DeltaArm
+{
+public:
+DeltaArm(int Sb, int Sp, int L, int l, int h);
+
+void inverseKinematics(float x, float y, float z);
+
+private:
+float anglesA[3];
+float anglesB[3];
+float a;
+float b;
+float c;
+
+int Sb;
+int Sp;
+int L;
+int l;
+int h;
+
+float Wb;
+float Ub;
+float Wp;
+float Up;
+
+};
+#endif
