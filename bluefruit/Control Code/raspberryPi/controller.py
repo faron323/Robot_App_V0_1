@@ -5,7 +5,7 @@ import os
 
 # for i in os.listdir('/dev/'):
 # print(i)
-arm = Arduino(name='Container_Arm_0', port='/dev/ttyUSB0', baud=115200)
+arm = Arduino(name='Container_Arm_0', port='/dev/ttyACM0', baud=115200)
 
 # For all Buttons, 1 = Press, 0 = Lift
 
