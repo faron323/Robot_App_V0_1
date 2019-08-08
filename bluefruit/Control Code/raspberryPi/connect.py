@@ -9,6 +9,7 @@ class Arduino(object):
 
     def __init__(self, name='Arduino', port='/dev/ttyACM0', baud=115200):
         self.name = name
+        self.baudrate = baud
         ser_port = port
         try:
             self.ser = serial.Serial(
@@ -19,9 +20,16 @@ class Arduino(object):
                 bytesize=serial.EIGHTBITS,
                 timeout=1
             )
-        except Exception:
-            print("Error: /dev/ttyACM%s doesn't exist (use port arg to select)" % port)
+        except Exception as e:
+            print(e)
             quit()
+
+    def disconnect(self):
+        try:
+            self.ser.close()
+        except Exception as e:
+            print("failed to disconnect")
+            print(e)
 
     def read(self, *args, **kwargs):
         input = self.ser.read()
@@ -29,6 +37,10 @@ class Arduino(object):
 
     def write(self, data, **kwargs):
         try:
-            self.ser.write(struct.pack('>B', data))
-        except Exception:
-            self.ser.write(data.encode())
+            try:
+                self.ser.write(struct.pack('>B', data))
+            except Exception:
+                self.ser.write(data.encode())
+        except Exception as e:
+            print(e)
+            exit()
